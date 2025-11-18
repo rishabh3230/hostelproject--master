@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "814821307130",
+    "project_id": "hostel-iert",
+    "storage_bucket": "hostel-iert.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:814821307130:android:1b691ad3be7dbc781e8f43",
+        "android_client_info": {
+          "package_name": "com.example.hms"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "814821307130-f0ligshkle8r18ptdn330ssvqbedgi80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeN6okSzSJHfnIl6uQ-DiWJ1FV7qrePXc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "814821307130-f0ligshkle8r18ptdn330ssvqbedgi80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
