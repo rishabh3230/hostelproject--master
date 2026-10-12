@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 
 class StudentLoginScreen extends StatefulWidget {
   const StudentLoginScreen({super.key});
@@ -13,7 +15,10 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
   bool _isLoading = false;
 
   void _login() async {
-    if (_studentIdController.text.isEmpty || _passwordController.text.isEmpty) {
+    final String rollNo = _studentIdController.text.trim();
+    final String password = _passwordController.text;
+
+    if (rollNo.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please enter both Student ID and password'),
@@ -26,14 +31,36 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
       _isLoading = true;
     });
 
-    await Future<void>.delayed(const Duration(seconds: 2));
+    try {
+      await AuthService().signInWithStudentId(rollNo, password);
 
-    // For demonstration, any non-empty student ID and password will log in
-    Navigator.pushReplacementNamed(context, '/studentDashboard');
-
-    setState(() {
-      _isLoading = false;
-    });
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/studentDashboard');
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Login failed';
+      if (e.code == 'user-not-found') {
+        errorMessage = 'No student profile found with Roll No: $rollNo';
+      } else if (e.code == 'wrong-password') {
+        errorMessage = 'Incorrect password';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'Incorrect email registered for this Roll No';
+      } else {
+        errorMessage = e.message ?? 'Login failed';
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('An unexpected error occurred')));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -47,28 +74,22 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Student Login'),
-        // Background color now from theme
-      ),
+      appBar: AppBar(title: const Text('Student Login')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.school,
-              size: 80,
-              // Changed icon color to dark green
-            ),
+            const Icon(Icons.school, size: 80, color: Color(0xFF1B5E20)),
             const SizedBox(height: 30),
             TextField(
               controller: _studentIdController,
               decoration: const InputDecoration(
-                labelText: 'Student ID',
+                labelText: 'Student ID / Roll No',
                 prefixIcon: Icon(Icons.badge),
                 border: OutlineInputBorder(),
               ),
+              textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 20),
             TextField(
@@ -79,24 +100,22 @@ class _StudentLoginScreenState extends State<StudentLoginScreen> {
                 prefixIcon: Icon(Icons.lock),
                 border: OutlineInputBorder(),
               ),
+              onSubmitted: (_) => _login(),
             ),
             const SizedBox(height: 30),
             _isLoading
-                ? const CircularProgressIndicator()
+                ? const CircularProgressIndicator(color: Color(0xFF1B5E20))
                 : SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _login,
-                // Style inherited from theme now
-                child: const Text(
-                  'Login',
-                  style: TextStyle(
-                    fontSize: 18,
-                  ), // Color is white from theme
-                ),
-              ),
-            ),
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _login,
+                      child: const Text(
+                        'Login',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                    ),
+                  ),
           ],
         ),
       ),

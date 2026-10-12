@@ -1,135 +1,225 @@
 import 'package:flutter/material.dart';
+import '../../services/firestore_service.dart';
+import '../../models/room.dart';
+import '../../models/student.dart';
+import 'student_profile_screen.dart';
 
-class StudentsListScreen extends StatelessWidget {
+class StudentsListScreen extends StatefulWidget {
   final String blockName;
 
   const StudentsListScreen({super.key, required this.blockName});
 
   @override
-  Widget build(BuildContext context) {
-    // Year-wise multiple student per room data
-    Map<String, List<Map<String, dynamic>>> yearStudents = {
-      '1st Year': [
-        {'name': 'Aman Gupta', 'room': '101'},
-        {'name': 'Rohit Kumar', 'room': '101'},
-        {'name': 'Priya Singh', 'room': '101'},
-        {'name': 'Vasu Mehra', 'room': '102'},
-      ],
-      '2nd Year': [
-        {'name': 'Kunal Mehra', 'room': '201'},
-        {'name': 'Simran Kaur', 'room': '201'},
-      ],
-      '3rd Year': [
-        {'name': 'Mohit Sharma', 'room': '301'},
-      ],
-      '4th Year': [
-        {'name': 'Aman Yadav', 'room': '401'},
-        {'name': 'Sahil Khan', 'room': '401'},
-      ],
-    };
+  State<StudentsListScreen> createState() => _StudentsListScreenState();
+}
 
-    // Available rooms — you can modify or load from DB
-    List<String> allRooms = [
-      '101', '102', '103', '104', '105',
-      '201', '202', '203', '204', '205',
-      '301', '302', '303', '304', '305',
-      '401', '402', '403', '404', '405',
-    ];
+class _StudentsListScreenState extends State<StudentsListScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
 
-    // Fetch students for this year
-    List<Map<String, dynamic>> students = yearStudents[blockName] ?? [];
-
-    // room → list of students
-    Map<String, List<String>> roomStudents = {};
-
-    for (var room in allRooms) {
-      roomStudents[room] = [];
-    }
-
-    // Fill mapping
-    for (var s in students) {
-      String room = s['room'];
-      String name = s['name'];
-
-      if (roomStudents.containsKey(room)) {
-        roomStudents[room]!.add(name);
-      }
-    }
-
-    // Ensure each room has exactly 3 slots
-    for (var room in roomStudents.keys) {
-      while (roomStudents[room]!.length < 3) {
-        roomStudents[room]!.add("Empty");
-      }
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('$blockName - Room Allocation'),
+  void _viewStudentProfileByRoll(String rollNo, List<Student> students) {
+    // Find student doc with this roll number
+    final student = students.firstWhere(
+      (s) => s.rollNo == rollNo,
+      orElse: () => Student(
+        id: '',
+        rollNo: rollNo,
+        name: 'Unknown Student',
+        email: '',
+        branch: '',
+        year: '',
+        roomAllotted: '',
+        hostelBlock: '',
+        phone: '',
+        parentsContact: '',
+        casteCategory: '',
+        feeStatus: '',
+        authUid: '',
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: GridView.builder(
-          itemCount: allRooms.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, // 2 rooms per row
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.85,
+    );
+
+    if (student.id.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Profile for student ID $rollNo details not found in database.',
           ),
-          itemBuilder: (context, index) {
-            String room = allRooms[index];
-            List<String> threeStudents = roomStudents[room]!;
+        ),
+      );
+      return;
+    }
 
-            // Check if room has at least one student
-            bool filled = threeStudents.any((s) => s != "Empty");
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text('${student.name}\'s Profile')),
+          body: StudentProfileScreen(studentData: student),
+        ),
+      ),
+    );
+  }
 
-            return Card(
-              color: filled ? Colors.green[300] : Colors.grey[200],
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Room number
-                    Center(
-                      child: Text(
-                        room,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const Divider(),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('${widget.blockName} - Room Allocation')),
+      body: StreamBuilder<List<Room>>(
+        stream: _firestoreService.getRoomsInBlockStream(widget.blockName),
+        builder: (context, roomSnapshot) {
+          if (roomSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1B5E20)),
+            );
+          }
+          if (roomSnapshot.hasError) {
+            return Center(
+              child: Text('Error loading rooms: ${roomSnapshot.error}'),
+            );
+          }
 
-                    // 3 student slots
-                    for (int i = 0; i < 3; i++)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Text(
-                          '${i + 1}. ${threeStudents[i]}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: threeStudents[i] == "Empty"
-                                ? Colors.black54
-                                : Colors.black,
-                            fontWeight: threeStudents[i] == "Empty"
-                                ? FontWeight.normal
-                                : FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+          final rooms = roomSnapshot.data ?? [];
+          if (rooms.isEmpty) {
+            return const Center(
+              child: Text(
+                'No rooms configured for this block.\nPlease run the seeding tool.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
             );
-          },
-        ),
+          }
+
+          // Sort rooms by roomNumber
+          rooms.sort((a, b) => a.roomNumber.compareTo(b.roomNumber));
+
+          return StreamBuilder<List<Student>>(
+            stream: _firestoreService.studentsStream,
+            builder: (context, studentSnapshot) {
+              if (studentSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF1B5E20)),
+                );
+              }
+              if (studentSnapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Error loading students: ${studentSnapshot.error}',
+                  ),
+                );
+              }
+
+              final studentsList = studentSnapshot.data ?? [];
+
+              // Helper to map rollNo to student name
+              Map<String, String> rollNoToName = {
+                for (var s in studentsList) s.rollNo: s.name,
+              };
+
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: GridView.builder(
+                  itemCount: rooms.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.85,
+                  ),
+                  itemBuilder: (context, index) {
+                    final room = rooms[index];
+                    final bool hasOccupants =
+                        room.occupantStudentIds.isNotEmpty;
+
+                    return Card(
+                      color: hasOccupants
+                          ? Colors.green[300]
+                          : Colors.grey[200],
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Text(
+                                'Room ${room.roomNumber}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const Divider(color: Colors.black26),
+                            Expanded(
+                              child: ListView.builder(
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: room.capacity,
+                                itemBuilder: (context, sIndex) {
+                                  final bool occupied =
+                                      sIndex < room.occupantStudentIds.length;
+                                  final String roll = occupied
+                                      ? room.occupantStudentIds[sIndex]
+                                      : '';
+                                  final String name = occupied
+                                      ? (rollNoToName[roll] ?? roll)
+                                      : 'Empty';
+
+                                  return GestureDetector(
+                                    onTap: occupied
+                                        ? () => _viewStudentProfileByRoll(
+                                            roll,
+                                            studentsList,
+                                          )
+                                        : null,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 4,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            '${sIndex + 1}. ',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: Text(
+                                              name,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: occupied
+                                                    ? Colors.black
+                                                    : Colors.black54,
+                                                fontWeight: occupied
+                                                    ? FontWeight.bold
+                                                    : FontWeight.normal,
+                                                decoration: occupied
+                                                    ? TextDecoration.underline
+                                                    : TextDecoration.none,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

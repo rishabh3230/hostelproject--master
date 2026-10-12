@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -36,10 +33,7 @@ class DefaultFirebaseOptions {
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -57,6 +51,24 @@ class DefaultFirebaseOptions {
     appId: '1:814821307130:android:1b691ad3be7dbc781e8f43',
     messagingSenderId: '814821307130',
     projectId: 'hostel-iert',
+    storageBucket: 'hostel-iert.firebasestorage.app',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyCeN6okSzSJHfnIl6uQ-DiWJ1FV7qrePXc',
+    appId: '1:814821307130:web:1b691ad3be7dbc781e8f43',
+    messagingSenderId: '814821307130',
+    projectId: 'hostel-iert',
+    authDomain: 'hostel-iert.firebaseapp.com',
+    storageBucket: 'hostel-iert.firebasestorage.app',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCeN6okSzSJHfnIl6uQ-DiWJ1FV7qrePXc',
+    appId: '1:814821307130:web:1b691ad3be7dbc781e8f43',
+    messagingSenderId: '814821307130',
+    projectId: 'hostel-iert',
+    authDomain: 'hostel-iert.firebaseapp.com',
     storageBucket: 'hostel-iert.firebasestorage.app',
   );
 }

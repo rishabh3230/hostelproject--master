@@ -2,26 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:hms/screens/admin_dashboard.dart';
 import 'package:hms/screens/login_selection_screen.dart';
 import 'package:hms/screens/student_dashboard.dart';
+import 'package:hms/services/auth_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:firebase_core/firebase_core.dart'; // Add this import
-import 'firebase_options.dart'; // Mak
-// Define a consistent dark green color for the theme
-const Color _darkGreen = Color(
-  0xFF1B5E20,
-); // A dark shade of green, equivalent to Colors.green[800]
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
+const Color _darkGreen = Color(0xFF1B5E20);
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();u
-  
+  WidgetsFlutterBinding.ensureInitialized();
+
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const HostelManagementApp());
 }
-
 
 class HostelManagementApp extends StatelessWidget {
   const HostelManagementApp({super.key});
@@ -29,7 +25,7 @@ class HostelManagementApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IERT Hostel', // Changed app name
+      title: 'IERT Hostel',
       theme: ThemeData(
         primaryColor: _darkGreen,
         colorScheme: ColorScheme.fromSeed(
@@ -37,13 +33,12 @@ class HostelManagementApp extends StatelessWidget {
           primary: _darkGreen,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: _darkGreen, // Dark green app bar
+          backgroundColor: _darkGreen,
           foregroundColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor:
-            _darkGreen, // Dark green elevated buttons by default
+            backgroundColor: _darkGreen,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -56,9 +51,56 @@ class HostelManagementApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
-        '/': (context) => const LoginSelectionScreen(),
+        '/': (context) => const AuthGate(),
+        '/loginSelection': (context) => const LoginSelectionScreen(),
         '/adminDashboard': (context) => const AdminDashboard(),
         '/studentDashboard': (context) => const StudentDashboard(),
+      },
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authService = AuthService();
+    return StreamBuilder<User?>(
+      stream: authService.authStateChanges,
+      builder: (context, snapshot) {
+        // Auth state loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator(color: _darkGreen)),
+          );
+        }
+
+        final User? user = snapshot.data;
+        if (user == null) {
+          return const LoginSelectionScreen();
+        }
+
+        // Authenticated. Check if admin or student.
+        return FutureBuilder<bool>(
+          future: authService.isAdmin(user.uid),
+          builder: (context, adminSnapshot) {
+            if (adminSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(color: _darkGreen),
+                ),
+              );
+            }
+            final bool isAdminProfile = adminSnapshot.data ?? false;
+
+            if (isAdminProfile) {
+              return const AdminDashboard();
+            } else {
+              return const StudentDashboard();
+            }
+          },
+        );
       },
     );
   }

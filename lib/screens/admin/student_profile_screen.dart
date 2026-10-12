@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-
-import '../student_dashboard.dart';
+import '../../models/student.dart';
 
 class StudentProfileScreen extends StatelessWidget {
-  final StudentProfileData studentData;
+  final Student studentData;
 
   const StudentProfileScreen({super.key, required this.studentData});
 
@@ -13,16 +12,7 @@ class StudentProfileScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 20.0),
       child: Column(
         children: [
-          StudentProfileCard(
-            rollNo: studentData.rollNo,
-            branch: studentData.branch,
-            roomAllotted: studentData.roomAllotted,
-            year: studentData.year,
-            phone: studentData.phone,
-            feeDetails: studentData.feeDetails,
-            casteCategory: studentData.casteCategory, // Pass new field
-            parentsContact: studentData.parentsContact, // Pass new field
-          ),
+          StudentProfileCard(student: studentData),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
@@ -38,55 +28,43 @@ class StudentProfileScreen extends StatelessWidget {
 }
 
 class StudentProfileCard extends StatelessWidget {
-  final String rollNo;
-  final String branch;
-  final String roomAllotted;
-  final String year;
-  final String phone;
-  final String feeDetails;
-  final String casteCategory; // New field
-  final String parentsContact; // New field
+  final Student student;
 
-  const StudentProfileCard({
-    super.key,
-    required this.rollNo,
-    required this.branch,
-    required this.roomAllotted,
-    required this.year,
-    required this.phone,
-    required this.feeDetails,
-    required this.casteCategory, // Required in constructor
-    required this.parentsContact, // Required in constructor
-  });
+  const StudentProfileCard({super.key, required this.student});
 
   @override
   Widget build(BuildContext context) {
+    final String allotmentStatus = student.roomAllotted.isEmpty
+        ? 'Not Allotted'
+        : 'Room ${student.roomAllotted} (${student.hostelBlock})';
+
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       elevation: 8,
-       // Light background color, adjusted
       margin: const EdgeInsets.all(16),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
+            const Center(
               child: CircleAvatar(
                 radius: 40,
-                 // Changed avatar background to dark green
-                child: const Icon(Icons.person, size: 50, color: Colors.white),
+                backgroundColor: Color(0xFF1B5E20),
+                child: Icon(Icons.person, size: 50, color: Colors.white),
               ),
             ),
             const SizedBox(height: 20),
-            _profileRow("Roll No.", rollNo),
-            _profileRow("Branch", branch),
-            _profileRow("Room Allotted", roomAllotted),
-            _profileRow("Year", year),
-            _profileRow("Phone No.", phone),
-            _profileRow("Caste Category", casteCategory), // Display new field
-            _profileRow("Parents Contact", parentsContact), // Display new field
-            _profileRow("Fee Details", feeDetails),
+            _profileRow("Name", student.name),
+            _profileRow("Email", student.email),
+            _profileRow("Roll No / ID", student.rollNo),
+            _profileRow("Branch", student.branch),
+            _profileRow("Room Allotted", allotmentStatus),
+            _profileRow("Academic Year", student.year),
+            _profileRow("Phone No.", student.phone),
+            _profileRow("Caste Category", student.casteCategory),
+            _profileRow("Parents Contact", student.parentsContact),
+            _profileRow("Fee Status", student.feeStatus),
           ],
         ),
       ),
@@ -95,22 +73,26 @@ class StudentProfileCard extends StatelessWidget {
 
   Widget _profileRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "$label: ",
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.black87,
+          SizedBox(
+            width: 130,
+            child: Text(
+              "$label: ",
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.black87,
+              ),
             ),
           ),
           Expanded(
             child: Text(
-              value,
+              value.isEmpty ? 'N/A' : value,
               style: const TextStyle(fontSize: 16, color: Colors.black87),
-              overflow: TextOverflow.ellipsis,
+              softWrap: true,
             ),
           ),
         ],

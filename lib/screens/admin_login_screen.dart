@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/auth_service.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -13,7 +14,6 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   bool _isLoading = false;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<void> _loginEmail() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -26,41 +26,36 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      await AuthService().signInAdmin(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
-
-      // Optional: You can add admin email verification here
-      // if (userCredential.user?.email != 'admin@example.com') {
-      //   await _auth.signOut();
-      //   throw FirebaseAuthException(message: 'Access denied. Admin only.');
-      // }
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/adminDashboard');
-      
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Login failed';
-      
+
       if (e.code == 'user-not-found') {
-        errorMessage = 'No user found with this email';
+        errorMessage = 'No administrator account found with this email';
       } else if (e.code == 'wrong-password') {
         errorMessage = 'Incorrect password';
       } else if (e.code == 'invalid-email') {
         errorMessage = 'Invalid email address';
       } else if (e.code == 'user-disabled') {
         errorMessage = 'This account has been disabled';
+      } else if (e.code == 'operation-not-allowed') {
+        errorMessage = e.message ?? 'Access denied. Admin only.';
       } else {
         errorMessage = e.message ?? 'Login failed';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An unexpected error occurred')),
+        const SnackBar(content: Text('An unexpected error occurred')),
       );
     }
 
@@ -80,9 +75,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Admin Login'),
-      ),
+      appBar: AppBar(title: const Text('Admin Login')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -91,6 +84,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             const Icon(
               Icons.admin_panel_settings,
               size: 80,
+              color: Color(0xFF1B5E20),
             ),
             const SizedBox(height: 30),
 
@@ -98,11 +92,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(
-                labelText: 'Email',
+                labelText: 'Admin Email',
                 prefixIcon: Icon(Icons.email),
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 20),
 
@@ -120,14 +115,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             const SizedBox(height: 30),
 
             _isLoading
-                ? const CircularProgressIndicator()
+                ? const CircularProgressIndicator(color: Color(0xFF1B5E20))
                 : SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
                       onPressed: _loginEmail,
                       child: const Text(
-                        'Login with Email',
+                        'Login as Admin',
                         style: TextStyle(fontSize: 18),
                       ),
                     ),
@@ -138,53 +133,3 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
