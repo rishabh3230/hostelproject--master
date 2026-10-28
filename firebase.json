@@ -16,10 +16,59 @@
         "lib/firebase_options.dart": {
           "projectId": "hostel-iert",
           "configurations": {
-            "android": "1:814821307130:android:1b691ad3be7dbc781e8f43"
+            "android": "1:814821307130:android:1b691ad3be7dbc781e8f43",
+            "ios": "1:814821307130:ios:4b50ae28c7cac9351e8f43",
+            "web": "1:814821307130:web:db95f1b2b730734f1e8f43"
           }
         }
       }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        "test",
+        "*.log"
+      ]
+    }
+  ],
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
+    "public": "build/web",
+    "rewrites": [
+      {
+        "destination": "/index.html",
+        "source": "**"
+      }
+    ],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  },
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8188,
+      "websocketPort": 9158
+    },
+    "ui": {
+      "enabled": true
+    },
+    "storage": {
+      "port": 9199
+    },
+    "singleProjectMode": true,
+    "auth": {
+      "port": 9099
     }
   }
 }

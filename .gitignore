@@ -43,3 +43,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Backend and local credentials
+functions/node_modules/
+functions/.env*
+functions/.secret.local
+**/service-account*.json
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

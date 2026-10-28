@@ -23,17 +23,14 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        return windows;
+        throw UnsupportedError('Run HMS on Android, iOS or web.');
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -55,20 +52,23 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCeN6okSzSJHfnIl6uQ-DiWJ1FV7qrePXc',
-    appId: '1:814821307130:web:1b691ad3be7dbc781e8f43',
+    apiKey: 'AIzaSyDSLjHaQQpWDRSOZphLykP_EIyi8XWkuz0',
+    appId: '1:814821307130:web:db95f1b2b730734f1e8f43',
     messagingSenderId: '814821307130',
     projectId: 'hostel-iert',
     authDomain: 'hostel-iert.firebaseapp.com',
     storageBucket: 'hostel-iert.firebasestorage.app',
+    measurementId: 'G-NGKFRWZ14X',
   );
 
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCeN6okSzSJHfnIl6uQ-DiWJ1FV7qrePXc',
-    appId: '1:814821307130:web:1b691ad3be7dbc781e8f43',
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyDHchhpnmx4XIxqs-6sVXF9c1GQZ3Mw2Ig',
+    appId: '1:814821307130:ios:4b50ae28c7cac9351e8f43',
     messagingSenderId: '814821307130',
     projectId: 'hostel-iert',
-    authDomain: 'hostel-iert.firebaseapp.com',
     storageBucket: 'hostel-iert.firebasestorage.app',
+    iosClientId:
+        '814821307130-muau3rhknj7hf93i0msvhp7rc25vj6kg.apps.googleusercontent.com',
+    iosBundleId: 'com.example.hms',
   );
 }

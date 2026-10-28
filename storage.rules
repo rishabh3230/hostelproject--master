@@ -1,0 +1,21 @@
+rules_version = '2';
+service firebase.storage {
+ match /b/{bucket}/o {
+  function signedIn() { return request.auth != null; }
+  function profile() { return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data; }
+  function admin() { return signedIn() && request.auth.token.role == 'admin' && profile().role == 'admin'; }
+  function student() { return signedIn() && request.auth.token.role == 'student' && profile().role == 'student' && profile().mustChangePassword == false && profile().provisioning == false; }
+  function validFile() { return request.resource.size <= 5 * 1024 * 1024 && request.resource.contentType.matches('(image/(jpeg|png)|application/pdf|text/plain)'); }
+  match /complaints/{uid}/{complaintId}/attachment {
+   allow read: if admin() || (student() && request.auth.uid == uid);
+   allow create: if (admin() || (student() && request.auth.uid == uid)) && validFile();
+   allow update: if false;
+   allow delete: if admin() || (student() && request.auth.uid == uid && !firestore.exists(/databases/(default)/documents/complaints/$(complaintId)));
+  }
+  match /notices/{noticeId}/attachment {
+   allow read: if admin() || student();
+   allow create: if admin() && validFile();
+   allow delete: if admin();
+  }
+ }
+}

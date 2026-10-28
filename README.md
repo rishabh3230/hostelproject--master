@@ -1,16 +1,9 @@
-# IERT Hostel Management System (HMS)
+# IERT Hostel Management
 
-This is a Flutter-based Hostel Management application integrated with Firebase Authentication and Cloud Firestore for role-based authorization, complaints filing, fee tracking, vacancy checking, and notices management.
+Flutter + Firebase hostel management for Android, iOS, and web.
 
-## Getting Started
+Complete schema, rules, function inventory, file structure, migration requirements, and setup/run checklist: [SETUP.md](SETUP.md).
 
-This project is a starting point for a Flutter application.
+Features: role-based authentication, admin student provisioning, mandatory initial password change, transactional room allocation, live notices and complaints with private attachments, FCM, Razorpay order creation and signed-webhook settlement.
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Start with `flutter pub get`, then follow SETUP.md to configure the administrator, backend secrets, and deployment. The generated Firebase options target `hostel-iert`.

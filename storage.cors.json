@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://hostel-iert.web.app", "https://hostel-iert.firebaseapp.com", "http://localhost:8085"],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type", "Authorization"],
+    "maxAgeSeconds": 3600
+  }
+]

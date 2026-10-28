@@ -1,107 +1,109 @@
-import 'package:flutter/material.dart';
-import 'package:hms/screens/admin_dashboard.dart';
-import 'package:hms/screens/login_selection_screen.dart';
-import 'package:hms/screens/student_dashboard.dart';
-import 'package:hms/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'providers/session_provider.dart';
+import 'screens/auth_screen.dart';
+import 'screens/home_screen.dart';
+import 'services/notification_service.dart';
 
-const Color _darkGreen = Color(0xFF1B5E20);
-
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  runApp(const HostelManagementApp());
-}
-
-class HostelManagementApp extends StatelessWidget {
-  const HostelManagementApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'IERT Hostel',
-      theme: ThemeData(
-        primaryColor: _darkGreen,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: _darkGreen,
-          primary: _darkGreen,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: _darkGreen,
-          foregroundColor: Colors.white,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _darkGreen,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    if (kIsWeb) await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS)) {
+      FirebaseMessaging.onBackgroundMessage(backgroundMessage);
+    }
+    runApp(
+      ChangeNotifierProvider(
+        create: (_) => SessionProvider(),
+        child: const HostelManagementApp(),
+      ),
+    );
+  } catch (error) {
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: SelectableText(
+                'Firebase setup failed. Run flutterfire configure for this platform.\n\n$error',
+              ),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 15),
           ),
         ),
-        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      debugShowCheckedModeBanner: false,
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const AuthGate(),
-        '/loginSelection': (context) => const LoginSelectionScreen(),
-        '/adminDashboard': (context) => const AdminDashboard(),
-        '/studentDashboard': (context) => const StudentDashboard(),
-      },
     );
   }
 }
 
+class HostelManagementApp extends StatelessWidget {
+  const HostelManagementApp({super.key});
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'IERT Hostel',
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF176B52)),
+      inputDecorationTheme: const InputDecorationTheme(
+        border: OutlineInputBorder(),
+      ),
+    ),
+    home: const AuthGate(),
+  );
+}
+
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
-
   @override
   Widget build(BuildContext context) {
-    final authService = AuthService();
-    return StreamBuilder<User?>(
-      stream: authService.authStateChanges,
-      builder: (context, snapshot) {
-        // Auth state loading
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator(color: _darkGreen)),
-          );
-        }
-
-        final User? user = snapshot.data;
-        if (user == null) {
-          return const LoginSelectionScreen();
-        }
-
-        // Authenticated. Check if admin or student.
-        return FutureBuilder<bool>(
-          future: authService.isAdmin(user.uid),
-          builder: (context, adminSnapshot) {
-            if (adminSnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(color: _darkGreen),
+    final session = context.watch<SessionProvider>();
+    if (session.loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (session.user == null) return const AuthScreen();
+    if (session.error != null ||
+        session.account == null ||
+        session.account!.provisioning) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  session.error ??
+                      'Your account is still being provisioned. Ask the administrator to retry the allotment.',
                 ),
-              );
-            }
-            final bool isAdminProfile = adminSnapshot.data ?? false;
-
-            if (isAdminProfile) {
-              return const AdminDashboard();
-            } else {
-              return const StudentDashboard();
-            }
-          },
-        );
-      },
+                TextButton(
+                  onPressed: session.signOut,
+                  child: const Text('Sign out'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (session.account!.mustChangePassword) {
+      return const PasswordScreen(forced: true);
+    }
+    // A keyed Navigator removes every old role/user route when authentication changes.
+    return Navigator(
+      key: ValueKey('${session.account!.uid}:${session.account!.role}'),
+      onGenerateRoute: (_) =>
+          MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
     );
   }
 }

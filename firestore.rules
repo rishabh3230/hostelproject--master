@@ -1,71 +1,71 @@
 rules_version = '2';
 service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Helper function to check if user is authenticated
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Helper function to check if user exists in the admins collection
-    function isAdmin() {
-      return isAuthenticated() && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-    
-    // Helper function to check if the student is accessing their own data (comparing rollNo)
-    function isOwner(studentRollNo) {
-      return isAuthenticated() && (
-        get(/databases/$(database)/documents/students/$(studentRollNo)).data.authUid == request.auth.uid
-      );
-    }
-    
-    // Students collection rules
-    match /students/{studentId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.authUid);
-      allow create: if isAuthenticated();
-    }
-    
-    // Admins collection rules
-    // Allow any authenticated user to CREATE their own admin doc (bootstrapping).
-    // Only existing admins can UPDATE or DELETE admin docs.
-    match /admins/{adminId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && adminId == request.auth.uid;
-      allow update, delete: if isAdmin();
-    }
-    
-    // Complaints rules
-    match /complaints/{complaintId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.studentId != null && isOwner(resource.data.studentId));
-      allow create: if isAuthenticated() && request.resource.data.studentId != null && isOwner(request.resource.data.studentId);
-      allow update, delete: if isAdmin();
-    }
-    
-    // Fees rules
-    match /fees/{feeId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.studentId != null && isOwner(resource.data.studentId));
-      allow write: if isAdmin();
-    }
-    
-    // Notices rules
-    match /notices/{noticeId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-    
-    // Feedback rules
-    match /feedback/{feedbackId} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.studentId != null && isOwner(resource.data.studentId));
-      allow create: if isAuthenticated() && request.resource.data.studentId != null && isOwner(request.resource.data.studentId);
-      allow update, delete: if isAdmin();
-    }
-    
-    // Rooms rules
-    match /rooms/{roomId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
+ match /databases/{database}/documents {
+  function signedIn() { return request.auth != null; }
+  function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+  function admin() { return signedIn() && request.auth.token.role == 'admin' && profile().role == 'admin'; }
+  function student() { return signedIn() && request.auth.token.role == 'student' && profile().role == 'student' && profile().mustChangePassword == false && profile().provisioning == false; }
+  function own(uid) { return student() && request.auth.uid == uid; }
+  match /users/{uid} {
+   allow read: if admin() || (signedIn() && request.auth.uid == uid);
+   allow write: if false;
   }
+  match /students/{uid} { allow read: if admin() || own(uid); allow write: if false; }
+  match /rooms/{id} {
+   allow read: if admin() || student();
+   allow create: if admin()
+    && request.resource.data.keys().hasAll(['block','number','capacity','occupied','occupantIds'])
+    && request.resource.data.keys().hasOnly(['block','number','capacity','occupied','occupantIds'])
+    && request.resource.data.block is string && request.resource.data.block.size() > 0 && request.resource.data.block.size() <= 60
+    && request.resource.data.number is string && request.resource.data.number.size() > 0 && request.resource.data.number.size() <= 20
+    && request.resource.data.capacity is int && request.resource.data.capacity >= 1 && request.resource.data.capacity <= 20
+    && request.resource.data.occupied == 0 && request.resource.data.occupantIds == [];
+   allow update: if admin()
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['capacity'])
+    && request.resource.data.capacity is int && request.resource.data.capacity >= 1 && request.resource.data.capacity <= 20
+    && resource.data.occupantIds is list && resource.data.occupied == resource.data.occupantIds.size()
+    && request.resource.data.capacity >= resource.data.occupied;
+  }
+  match /complaints/{id} {
+   allow read: if admin() || own(resource.data.studentId);
+   allow create: if own(request.resource.data.studentId)
+    && request.resource.data.keys().hasOnly(['studentId','title','description','attachmentPath','status','remark','createdAt'])
+    && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120
+    && request.resource.data.description is string && request.resource.data.description.size() > 0 && request.resource.data.description.size() <= 5000
+    && request.resource.data.status == 'open' && request.resource.data.remark == ''
+    && request.resource.data.createdAt == request.time
+    && (request.resource.data.attachmentPath == '' || request.resource.data.attachmentPath == 'complaints/' + request.auth.uid + '/' + id + '/attachment');
+   allow update: if admin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','remark','resolvedAt'])
+    && request.resource.data.status in ['open','resolved']
+    && request.resource.data.remark is string && request.resource.data.remark.size() <= 2000
+    && (request.resource.data.status != 'resolved' || request.resource.data.remark.size() > 0)
+    && request.resource.data.resolvedAt == request.time;
+   allow delete: if admin();
+  }
+  match /notices/{id} {
+   allow read: if admin() || student();
+   allow create, update: if admin()
+    && request.resource.data.keys().hasOnly(['title','body','attachmentPath','createdAt','postedBy'])
+    && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120
+    && request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 5000
+    && request.resource.data.postedBy == request.auth.uid && request.resource.data.createdAt == request.time
+    && (request.resource.data.attachmentPath == '' || request.resource.data.attachmentPath == 'notices/' + id + '/attachment');
+   allow delete: if admin();
+  }
+  match /payments/{id} { allow read: if admin() || own(resource.data.uid); allow write: if false; }
+  match /feedback/{id} {
+   allow read: if admin() || own(resource.data.studentId);
+   allow create: if own(request.resource.data.studentId)
+    && request.resource.data.keys().hasOnly(['studentId','category','rating','message','createdAt'])
+    && request.resource.data.category in ['Cleanliness','Food','Facilities','Staff','General']
+    && request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+    && request.resource.data.message is string && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
+    && request.resource.data.createdAt == request.time;
+   allow delete: if admin();
+  }
+  match /paymentOrders/{id} { allow read: if admin() || own(resource.data.uid); allow write: if false; }
+  match /feeAdjustments/{id} { allow read: if admin(); allow write: if false; }
+  match /rollNumbers/{id} { allow read: if admin(); allow write: if false; }
+  match /{document=**} { allow read, write: if false; }
+ }
 }
